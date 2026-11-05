@@ -1,0 +1,10 @@
+
+> riaf@0.1.0 start
+> next start -p 3100
+
+   ▲ Next.js 15.5.28
+   - Local:        http://localhost:3100
+   - Network:      http://192.168.100.199:3100
+
+ ✓ Starting...
+ ✓ Ready in 944ms
