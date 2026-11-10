@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/products";
 import { ArrowLeft, CardIcon, Check, Shield } from "./icons";
 import { CouponForm } from "./coupon-form";
 import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 import { useStore } from "./store";
 
 const fieldClass =
@@ -40,17 +41,20 @@ function SectionHeading({
 export function CheckoutView() {
   const {
     items,
-    count,
+    availableItems,
+    unavailableItems,
+    availableCount,
     subtotal,
     discount,
     appliedCode,
     coupon,
     hydrated,
+    catalog,
   } = useStore();
   const [delivery, setDelivery] = useState<"standard" | "express">("standard");
   const [payment, setPayment] = useState<"card" | "paypal" | "apple">("card");
 
-  const standardShipping = subtotal >= 75 ? 0 : 6;
+  const standardShipping = subtotal === 0 || subtotal >= 75 ? 0 : 6;
   const shipping = delivery === "express" ? 12 : standardShipping;
   const total = Math.max(0, subtotal - discount) + shipping;
 
@@ -118,10 +122,28 @@ export function CheckoutView() {
         </div>
       </div>
 
-      <form
-        onSubmit={(event) => event.preventDefault()}
-        className="mt-8 grid gap-6 lg:grid-cols-[1.5fr_0.9fr] lg:items-start"
-      >
+      {unavailableItems.length > 0 && (
+        <div
+          role="status"
+          className="mt-6 flex flex-col gap-2 rounded-xl border border-ink/15 bg-beige/70 px-4 py-3 text-[12px] leading-relaxed text-ink/70 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span>
+            {unavailableItems.length === 1
+              ? "1 item in your cart is no longer available"
+              : `${unavailableItems.length} items in your cart are no longer available`}{" "}
+            and {unavailableItems.length === 1 ? "is" : "are"} excluded from
+            this order.
+          </span>
+          <Link
+            href="/cart"
+            className="shrink-0 self-start font-semibold text-ink underline-offset-4 hover:underline sm:self-auto"
+          >
+            Review cart
+          </Link>
+        </div>
+      )}
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-[1.5fr_0.9fr] lg:items-start">
         <div className="space-y-4">
           <section className="rounded-2xl border border-line bg-white/45 p-5 sm:p-6">
             <SectionHeading
@@ -387,32 +409,49 @@ export function CheckoutView() {
               </Link>
             </div>
 
-            <div className="mt-4 max-h-[280px] space-y-3 overflow-y-auto pr-1">
-              {items.map((item) => (
-                <div key={item.key} className="flex items-center gap-3">
-                  <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-beige">
-                    <ProductArt
-                      art={item.art}
-                      tone={item.tone}
-                      className="h-full w-full"
-                    />
-                    <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[9px] font-semibold text-cream">
-                      {item.quantity}
+            <div
+              data-lenis-prevent
+              className="mt-4 max-h-[280px] space-y-3 overflow-y-auto pr-1"
+            >
+              {availableItems.map((item) => {
+                const product = catalog.find(
+                  (entry) => entry.id === item.productId,
+                );
+
+                return (
+                  <div key={item.key} className="flex items-center gap-3">
+                    <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-beige">
+                      {product ? (
+                        <ProductImage
+                          product={product}
+                          alt={item.name}
+                          className="h-full w-full"
+                        />
+                      ) : (
+                        <ProductArt
+                          art={item.art}
+                          tone={item.tone}
+                          className="h-full w-full"
+                        />
+                      )}
+                      <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[9px] font-semibold text-cream">
+                        {item.quantity}
+                      </span>
                     </span>
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12px] font-semibold text-ink">
-                      {item.name}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12px] font-semibold text-ink">
+                        {item.name}
+                      </span>
+                      <span className="block truncate text-[10px] text-ink/40">
+                        {item.variant}
+                      </span>
                     </span>
-                    <span className="block truncate text-[10px] text-ink/40">
-                      {item.variant}
+                    <span className="text-[12px] font-medium text-ink">
+                      {formatPrice(item.price * item.quantity)}
                     </span>
-                  </span>
-                  <span className="text-[12px] font-medium text-ink">
-                    {formatPrice(item.price * item.quantity)}
-                  </span>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="mt-4 border-t border-line pt-4">
@@ -421,7 +460,7 @@ export function CheckoutView() {
 
             <div className="mt-4 space-y-2.5 border-t border-line pt-4 text-[12px]">
               <div className="flex items-center justify-between text-ink/55">
-                <span>Subtotal ({count} items)</span>
+                <span>Subtotal ({availableCount} items)</span>
                 <span className="font-medium text-ink">
                   {formatPrice(subtotal)}
                 </span>
@@ -461,10 +500,17 @@ export function CheckoutView() {
 
             <button
               type="button"
-              className="mt-5 h-12 w-full rounded-full bg-ink px-6 text-[13px] font-semibold text-cream transition-colors hover:bg-olive"
+              disabled={unavailableItems.length > 0}
+              className="mt-5 h-12 w-full rounded-full bg-ink px-6 text-[13px] font-semibold text-cream transition-colors hover:bg-olive disabled:cursor-not-allowed disabled:opacity-60"
             >
               Place order — {formatPrice(total)}
             </button>
+
+            {unavailableItems.length > 0 && (
+              <p className="mt-2 text-center text-[10px] font-medium text-ink/45">
+                Remove unavailable items from your cart to continue.
+              </p>
+            )}
 
             <p className="mt-3 text-center text-[10px] leading-relaxed text-ink/40">
               Order placement is not enabled in this demo. By continuing you
@@ -480,7 +526,7 @@ export function CheckoutView() {
             </Link>
           </div>
         </aside>
-      </form>
+      </div>
     </div>
   );
 }

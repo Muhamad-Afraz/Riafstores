@@ -84,6 +84,14 @@ export async function ensureSchema() {
         CREATE INDEX IF NOT EXISTS store_login_challenges_email_idx
           ON store_login_challenges (email);
       `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS catalog_media (
+          id TEXT PRIMARY KEY,
+          mime_type TEXT NOT NULL,
+          data BYTEA NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
     })().catch((error) => {
       globalForDb.riafSchema = undefined;
       throw error;

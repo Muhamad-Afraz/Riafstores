@@ -50,6 +50,28 @@ function buildSignInMessage(code: string): CodeTemplate {
   return { subject: "Your RIAF sign-in code", text, html };
 }
 
+function buildAdminSignInMessage(code: string): CodeTemplate {
+  const text = [
+    "Your RIAF admin sign-in code",
+    "",
+    `Enter this code to open the admin panel: ${code}`,
+    "",
+    "The code expires in 10 minutes. If you did not try to sign in, someone may have your admin password — change it immediately.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #201f1c;">
+      <p style="font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: #7a7a5c;">RIAF admin</p>
+      <h1 style="font-size: 22px; margin: 12px 0 8px;">Your admin sign-in code</h1>
+      <p style="font-size: 14px; color: #55524c;">Enter this code to open the admin panel:</p>
+      <p style="font-size: 34px; font-weight: 700; letter-spacing: 0.32em; margin: 20px 0;">${code}</p>
+      <p style="font-size: 13px; color: #55524c;">The code expires in 10 minutes. If you did not try to sign in, someone may have your admin password — change it immediately.</p>
+    </div>
+  `;
+
+  return { subject: "Your RIAF admin sign-in code", text, html };
+}
+
 function buildPasswordResetMessage(code: string): CodeTemplate {
   const text = [
     "Reset your RIAF password",
@@ -186,4 +208,11 @@ export async function sendPasswordResetCode(
     buildPasswordResetMessage(code),
     "Password reset code",
   );
+}
+
+export async function sendAdminLoginCode(
+  email: string,
+  code: string,
+): Promise<LoginCodeDelivery> {
+  return deliverCode(email, code, buildAdminSignInMessage(code), "Admin code");
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { categories } from "@/lib/products";
+import { startScroll, stopScroll } from "@/lib/scroll";
 import { AccountMenu } from "./account-menu";
 import { Marquee } from "./marquee";
 import { useStore } from "./store";
@@ -58,7 +59,7 @@ function IconLink({
 export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { count, wishlist, catalog } = useStore();
+  const { count, wishlistProducts, catalog } = useStore();
   const [query, setQuery] = useState("");
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -75,10 +76,28 @@ export function SiteHeader() {
     if (!mobileOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    stopScroll();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       document.body.style.overflow = previous;
+      startScroll();
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const handleChange = () => {
+      if (desktop.matches) setMobileOpen(false);
+    };
+    desktop.addEventListener("change", handleChange);
+    return () => desktop.removeEventListener("change", handleChange);
+  }, []);
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -98,13 +117,13 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50">
-      <div className="bg-ink py-2 text-[10px] uppercase tracking-[0.16em] text-cream/65">
+      <div className="hidden bg-ink py-2 text-[10px] uppercase tracking-[0.16em] text-cream/65 sm:block">
         <Marquee
           className="mask-fade-x"
           duration={44}
           items={[
-            "Free shipping over $75",
-            "Limited offer: 15% off orders over $100 with code RIAF15",
+            "Free shipping over SAR 75",
+            "Limited offer: 15% off orders over SAR 100 with code RIAF15",
             "30-day returns, no questions asked",
             "2-year warranty on every piece",
             "New season, fewer but better things",
@@ -205,9 +224,9 @@ export function SiteHeader() {
               <IconLink href="/wishlist" label="Wishlist">
                 <span className="relative">
                   <Heart className="h-[18px] w-[18px]" />
-                  {wishlist.length > 0 && (
+                  {wishlistProducts.length > 0 && (
                     <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-olive px-1 text-[9px] font-semibold text-cream">
-                      {wishlist.length}
+                      {wishlistProducts.length}
                     </span>
                   )}
                 </span>
@@ -278,6 +297,7 @@ export function SiteHeader() {
         {mobileOpen && (
           <div
             id="mobile-menu"
+            data-lenis-prevent
             className="max-h-[calc(100vh-8rem)] overflow-y-auto border-t border-line bg-cream lg:hidden"
           >
             <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">

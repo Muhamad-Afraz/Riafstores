@@ -86,19 +86,6 @@ function Divider() {
   );
 }
 
-function Notice({ message }: { message: string }) {
-  if (!message) return null;
-
-  return (
-    <p
-      role="status"
-      className="mt-3 rounded-xl bg-beige/60 px-3 py-2 text-[11px] leading-relaxed text-ink/55"
-    >
-      {message}
-    </p>
-  );
-}
-
 function FormError({ message }: { message: string }) {
   if (!message) return null;
 
@@ -157,7 +144,6 @@ export function SignInForm() {
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [googleMessage, setGoogleMessage] = useState("");
 
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
@@ -330,13 +316,9 @@ export function SignInForm() {
   };
 
   const startGoogle = () => {
-    if (providers && !providers.google) {
-      setGoogleMessage(
-        "Google sign-in is not configured on this server yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
-      );
-      return;
-    }
-
+    // Let the server decide whether Google is configured. It redirects back
+    // with ?error=google_not_configured when the env vars are missing, which
+    // avoids showing a stale "not configured" message on an old page load.
     window.location.assign("/api/account/google/start");
   };
 
@@ -499,7 +481,6 @@ export function SignInForm() {
       <Divider />
 
       <GoogleButton onClick={startGoogle} />
-      <Notice message={googleMessage} />
 
       <p className="mt-6 text-center text-[12px] text-ink/50">
         New to RIAF?{" "}
@@ -516,7 +497,7 @@ export function SignInForm() {
 
 export function CreateAccountForm() {
   const router = useRouter();
-  const { register, providers } = useAuth();
+  const { register } = useAuth();
   const { notify } = useStore();
 
   const [name, setName] = useState("");
@@ -531,7 +512,6 @@ export function CreateAccountForm() {
   }>({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [googleMessage, setGoogleMessage] = useState("");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -594,13 +574,6 @@ export function CreateAccountForm() {
   };
 
   const startGoogle = () => {
-    if (providers && !providers.google) {
-      setGoogleMessage(
-        "Google sign-in is not configured on this server yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
-      );
-      return;
-    }
-
     window.location.assign("/api/account/google/start");
   };
 
@@ -688,7 +661,6 @@ export function CreateAccountForm() {
       <Divider />
 
       <GoogleButton onClick={startGoogle} />
-      <Notice message={googleMessage} />
 
       <p className="mt-6 text-center text-[12px] text-ink/50">
         Already have an account?{" "}

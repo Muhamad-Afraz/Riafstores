@@ -20,3 +20,25 @@ export function setLenisInstance(instance: Lenis | null) {
 export function resetScroll() {
   lenisInstance?.scrollTo(0, { immediate: true, force: true });
 }
+
+export function stopScroll() {
+  if (lenisInstance) {
+    lenisInstance.stop();
+    return;
+  }
+
+  if (typeof document !== "undefined") {
+    document.documentElement.style.overflow = "hidden";
+  }
+}
+
+export function startScroll() {
+  if (lenisInstance) {
+    lenisInstance.start();
+    return;
+  }
+
+  if (typeof document !== "undefined") {
+    document.documentElement.style.overflow = "";
+  }
+}

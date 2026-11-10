@@ -14,6 +14,7 @@ import {
 } from "./icons";
 import { CouponForm } from "./coupon-form";
 import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 import { useStore } from "./store";
 
 const FREE_SHIPPING_THRESHOLD = 75;
@@ -21,7 +22,10 @@ const FREE_SHIPPING_THRESHOLD = 75;
 export function CartView() {
   const {
     items,
+    availableItems,
+    unavailableItems,
     count,
+    availableCount,
     subtotal,
     discount,
     shipping,
@@ -30,11 +34,14 @@ export function CartView() {
     coupon,
     hydrated,
     catalog,
+    catalogReady,
     updateQuantity,
     removeItem,
+    removeUnavailable,
     clearCart,
   } = useStore();
 
+  const suggestion = catalogReady ? catalog[0] : undefined;
   const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
   const progress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
 
@@ -61,8 +68,8 @@ export function CartView() {
           Your cart is empty
         </h1>
         <p className="mx-auto mt-3 max-w-md text-[13px] leading-relaxed text-ink/50">
-          A short list of good things is waiting. Start with the earbuds, or
-          browse the full RIAF edit.
+          A short list of good things is waiting. Browse the full RIAF edit and
+          keep what earns its place.
         </p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -72,12 +79,14 @@ export function CartView() {
             Browse all products
             <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
           </Link>
-          <Link
-            href="/product/riaf-buds-pro"
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-6 py-3.5 text-[13px] font-semibold text-ink transition-colors hover:border-ink/35 hover:bg-white/60"
-          >
-            Shop the Buds Pro
-          </Link>
+          {suggestion && (
+            <Link
+              href={`/product/${suggestion.slug}`}
+              className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-6 py-3.5 text-[13px] font-semibold text-ink transition-colors hover:border-ink/35 hover:bg-white/60"
+            >
+              Shop {suggestion.name}
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -104,13 +113,44 @@ export function CartView() {
         </div>
         <p className="text-[12px] text-ink/45">
           {count} {count === 1 ? "item" : "items"}
+          {unavailableItems.length > 0 && (
+            <span className="text-ink/35">
+              {" "}
+              · {unavailableItems.length} unavailable
+            </span>
+          )}
         </p>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.55fr_0.85fr] lg:items-start">
         <div>
-          <div className="overflow-hidden rounded-2xl border border-line bg-white/40">
-            {items.map((item) => {
+          {unavailableItems.length > 0 && (
+            <div
+              role="status"
+              className="mb-4 flex flex-col gap-3 rounded-xl border border-ink/15 bg-beige/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-[12px] leading-relaxed text-ink/70">
+                <span className="font-semibold text-ink">
+                  {unavailableItems.length}{" "}
+                  {unavailableItems.length === 1 ? "item is" : "items are"} no
+                  longer available
+                </span>{" "}
+                and {unavailableItems.length === 1 ? "is" : "are"} not included
+                in your total.
+              </p>
+              <button
+                type="button"
+                onClick={removeUnavailable}
+                className="shrink-0 self-start rounded-full border border-ink/20 px-3.5 py-1.5 text-[11px] font-semibold text-ink transition-colors hover:bg-white/60 sm:self-auto"
+              >
+                Remove unavailable
+              </button>
+            </div>
+          )}
+
+          {availableItems.length > 0 && (
+            <div className="overflow-hidden rounded-2xl border border-line bg-white/40">
+              {availableItems.map((item) => {
               const product = catalog.find((entry) => entry.id === item.productId);
               const maxQuantity = product?.stock ?? 99;
 
@@ -123,12 +163,20 @@ export function CartView() {
                     href={`/product/${item.slug}`}
                     className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-beige"
                   >
-                    <ProductArt
-                      art={item.art}
-                      tone={item.tone}
-                      title={item.name}
-                      className="h-full w-full"
-                    />
+                    {product ? (
+                      <ProductImage
+                        product={product}
+                        alt={item.name}
+                        className="h-full w-full"
+                      />
+                    ) : (
+                      <ProductArt
+                        art={item.art}
+                        tone={item.tone}
+                        title={item.name}
+                        className="h-full w-full"
+                      />
+                    )}
                   </Link>
 
                   <div className="min-w-0 flex-1">
@@ -196,8 +244,69 @@ export function CartView() {
                   </div>
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
+          )}
+
+          {unavailableItems.length > 0 && (
+            <div className="mt-4 overflow-hidden rounded-2xl border border-ink/15 bg-beige/30">
+              <div className="border-b border-line px-4 py-3 sm:px-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/45">
+                  Unavailable
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-ink/50">
+                  These products were removed from the store and are not part
+                  of your order.
+                </p>
+              </div>
+
+              {unavailableItems.map((item) => (
+                <div
+                  key={item.key}
+                  className="flex flex-col gap-4 border-b border-line p-4 last:border-b-0 sm:flex-row sm:items-center sm:p-5"
+                >
+                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-beige opacity-60 grayscale">
+                    <ProductArt
+                      art={item.art}
+                      tone={item.tone}
+                      title={item.name}
+                      className="h-full w-full"
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <span className="inline-flex items-center rounded-full bg-ink/80 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-cream">
+                      No longer available
+                    </span>
+                    <p className="mt-2 font-heading text-[15px] font-bold text-ink/45 line-through">
+                      {item.name}
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-ink/40">
+                      This product is no longer sold by RIAF.
+                    </p>
+                    <p className="mt-1 text-[11px] text-ink/30 line-through">
+                      {formatPrice(item.price)} each
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:gap-2">
+                    <span className="text-[11px] text-ink/35">
+                      Quantity {item.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.key)}
+                      aria-label={`Remove ${item.name} from cart`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-ink/20 px-3 py-1.5 text-[11px] font-semibold text-ink/60 transition-colors hover:border-ink/40 hover:text-ink"
+                    >
+                      <Trash className="h-3.5 w-3.5" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <Link
@@ -267,40 +376,47 @@ export function CartView() {
               </div>
             </div>
 
-            {remaining > 0 ? (
-              <div className="mt-4 rounded-xl bg-beige/60 p-3">
-                <p className="text-[11px] text-ink/60">
-                  You are{" "}
-                  <span className="font-semibold text-ink">
-                    {formatPrice(remaining)}
-                  </span>{" "}
-                  away from free shipping.
-                </p>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
-                  <div
-                    className="h-full rounded-full bg-olive transition-all duration-500"
-                    style={{ width: `${progress}%` }}
-                  />
+            {availableCount > 0 &&
+              (remaining > 0 ? (
+                <div className="mt-4 rounded-xl bg-beige/60 p-3">
+                  <p className="text-[11px] text-ink/60">
+                    You are{" "}
+                    <span className="font-semibold text-ink">
+                      {formatPrice(remaining)}
+                    </span>{" "}
+                    away from free shipping.
+                  </p>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
+                    <div
+                      className="h-full rounded-full bg-olive transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="mt-4 rounded-xl bg-olive-soft px-3 py-2.5 text-[11px] font-medium text-olive">
-                Free shipping unlocked.
-              </p>
-            )}
+              ) : (
+                <p className="mt-4 rounded-xl bg-olive-soft px-3 py-2.5 text-[11px] font-medium text-olive">
+                  Free shipping unlocked.
+                </p>
+              ))}
 
-            <Link
-              href="/checkout"
-              className="mt-5 flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-6 text-[13px] font-semibold text-cream transition-colors hover:bg-olive"
-            >
-              Proceed to checkout
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {availableCount > 0 ? (
+              <Link
+                href="/checkout"
+                className="mt-5 flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-6 text-[13px] font-semibold text-cream transition-colors hover:bg-olive"
+              >
+                Proceed to checkout
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <div className="mt-5 flex h-12 items-center justify-center rounded-full bg-ink/15 px-6 text-[12px] font-semibold text-ink/40">
+                Remove unavailable items to check out
+              </div>
+            )}
 
             <div className="mt-5 space-y-2.5 border-t border-line pt-4">
               <div className="flex items-center gap-2 text-[11px] text-ink/50">
                 <Truck className="h-4 w-4 shrink-0 text-olive" />
-                Free tracked shipping over $75
+                Free tracked shipping over SAR 75
               </div>
               <div className="flex items-center gap-2 text-[11px] text-ink/50">
                 <Refresh className="h-4 w-4 shrink-0 text-olive" />

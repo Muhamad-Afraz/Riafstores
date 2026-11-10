@@ -48,7 +48,7 @@ export type PublicAccount = {
   avatarUrl: string | null;
 };
 
-export type ChallengePurpose = "login" | "password-reset";
+export type ChallengePurpose = "login" | "password-reset" | "admin-login";
 
 export type LoginChallenge = {
   id: string;
@@ -137,7 +137,9 @@ function mapAccountRow(row: AccountRow): StoreAccount {
 }
 
 function normalizePurpose(value: unknown): ChallengePurpose {
-  return value === "password-reset" ? "password-reset" : "login";
+  if (value === "password-reset") return "password-reset";
+  if (value === "admin-login") return "admin-login";
+  return "login";
 }
 
 function mapChallengeRow(row: ChallengeRow): LoginChallenge {
@@ -190,7 +192,8 @@ function isLoginChallenge(value: unknown): value is LoginChallenge {
     challenge.attempts >= 0 &&
     (challenge.purpose === undefined ||
       challenge.purpose === "login" ||
-      challenge.purpose === "password-reset") &&
+      challenge.purpose === "password-reset" ||
+      challenge.purpose === "admin-login") &&
     typeof challenge.expiresAt === "string" &&
     typeof challenge.createdAt === "string"
   );
@@ -208,12 +211,23 @@ function withStoreLock<T>(task: () => Promise<T>): Promise<T> {
 }
 
 async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
+  let raw: string;
+
   try {
-    const raw = await fs.readFile(file, "utf8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
+    raw = await fs.readFile(file, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      return fallback;
+    }
+    throw error;
   }
+
+  const content = raw.replace(/^\uFEFF/, "").trim();
+  if (!content) return fallback;
+
+  // A parse failure must surface instead of being treated as an empty store,
+  // otherwise the next write would silently erase every stored record.
+  return JSON.parse(content) as T;
 }
 
 async function writeJsonFile(file: string, value: unknown) {

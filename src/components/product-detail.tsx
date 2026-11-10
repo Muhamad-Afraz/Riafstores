@@ -7,6 +7,7 @@ import {
   formatPrice,
   formatReviews,
   getCategory,
+  getProductImages,
   getRelatedProducts,
   type Product,
 } from "@/lib/products";
@@ -23,7 +24,7 @@ import {
   Tag,
   Truck,
 } from "./icons";
-import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 import { ProductCard } from "./product-card";
 import { PromoCode } from "./promo-code";
 import { useStore } from "./store";
@@ -40,7 +41,7 @@ export function ProductDetail({
   const { addItem, isWishlisted, toggleWishlist, recordView, notify } =
     useStore();
 
-  const [toneIndex, setToneIndex] = useState(0);
+  const [mediaIndex, setMediaIndex] = useState(0);
   const [variant, setVariant] = useState(product.variants[0]);
   const [quantity, setQuantity] = useState(1);
 
@@ -48,6 +49,23 @@ export function ProductDetail({
   const saved = isWishlisted(product.id);
   const related = relatedProducts ?? getRelatedProducts(product);
   const outOfStock = product.stock <= 0;
+  const uploadedImages = getProductImages(product);
+  const mediaCount =
+    uploadedImages.length > 0 ? uploadedImages.length : product.gallery.length;
+  const activeTone =
+    product.gallery[mediaIndex % Math.max(1, product.gallery.length)] ??
+    product.gallery[0] ??
+    "cream";
+  const mediaLabels =
+    uploadedImages.length > 0
+      ? [
+          "Main picture",
+          ...Array.from(
+            { length: Math.max(0, mediaCount - 1) },
+            (_, index) => `Showcase ${index + 1}`,
+          ),
+        ]
+      : toneLabels;
   const discount = product.compareAt
     ? Math.round((1 - product.price / product.compareAt) * 100)
     : 0;
@@ -81,10 +99,11 @@ export function ProductDetail({
       <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div>
           <div className="relative overflow-hidden rounded-[24px] border border-line bg-beige">
-            <ProductArt
-              art={product.art}
-              tone={product.gallery[toneIndex]}
-              title={`${product.name}, ${toneLabels[toneIndex].toLowerCase()}`}
+            <ProductImage
+              product={product}
+              index={mediaIndex}
+              alt={`${product.name}, ${(mediaLabels[mediaIndex] ?? "product picture").toLowerCase()}`}
+              loading="eager"
               className="aspect-[5/4] h-full w-full"
             />
             {product.badge && (
@@ -99,28 +118,31 @@ export function ProductDetail({
             )}
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            {product.gallery.map((tone, index) => (
-              <button
-                key={`${tone}-${index}`}
-                type="button"
-                onClick={() => setToneIndex(index)}
-                aria-label={`View ${toneLabels[index]}`}
-                aria-pressed={toneIndex === index}
-                className={`overflow-hidden rounded-xl border transition-colors ${
-                  toneIndex === index
-                    ? "border-ink"
-                    : "border-line hover:border-ink/35"
-                }`}
-              >
-                <ProductArt
-                  art={product.art}
-                  tone={tone}
-                  className="aspect-[5/4] h-full w-full"
-                />
-              </button>
-            ))}
-          </div>
+          {mediaCount > 1 && (
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {Array.from({ length: mediaCount }, (_, index) => (
+                <button
+                  key={`media-${index}`}
+                  type="button"
+                  onClick={() => setMediaIndex(index)}
+                  aria-label={`View ${mediaLabels[index] ?? `image ${index + 1}`}`}
+                  aria-pressed={mediaIndex === index}
+                  className={`overflow-hidden rounded-xl border transition-colors ${
+                    mediaIndex === index
+                      ? "border-ink"
+                      : "border-line hover:border-ink/35"
+                  }`}
+                >
+                  <ProductImage
+                    product={product}
+                    index={index}
+                    alt={mediaLabels[index] ?? `${product.name} picture ${index + 1}`}
+                    className="aspect-[5/4] h-full w-full"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="lg:pt-2">
@@ -194,7 +216,7 @@ export function ProductDetail({
           <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-line bg-beige/30 px-3 py-2 text-[11px] text-ink/55">
             <Tag className="h-3.5 w-3.5 shrink-0 text-olive" />
             <span>
-              {`Extra ${FEATURED_OFFER.percent}% off orders over $${FEATURED_OFFER.minSubtotal}`}
+              {`Extra ${FEATURED_OFFER.percent}% off orders over SAR ${FEATURED_OFFER.minSubtotal}`}
             </span>
             <PromoCode code={FEATURED_OFFER.code} />
           </div>
@@ -265,7 +287,7 @@ export function ProductDetail({
                 }
                 addItem(product, {
                   variant,
-                  tone: product.gallery[toneIndex],
+                  tone: activeTone,
                   quantity,
                 });
                 setQuantity(1);
@@ -296,7 +318,7 @@ export function ProductDetail({
           <div className="mt-6 grid gap-3 rounded-2xl border border-line bg-white/40 p-4 sm:grid-cols-3">
             <div className="flex items-center gap-2 text-[11px] text-ink/60">
               <Truck className="h-4 w-4 shrink-0 text-olive" />
-              Free shipping over $75
+              Free shipping over SAR 75
             </div>
             <div className="flex items-center gap-2 text-[11px] text-ink/60">
               <Refresh className="h-4 w-4 shrink-0 text-olive" />
@@ -352,7 +374,7 @@ export function ProductDetail({
               </summary>
               <p className="mt-3 text-[12px] leading-relaxed text-ink/55">
                 Dispatched within one working day. Tracked delivery arrives in
-                3-5 working days, free over $75. Returns are free within 30
+                3-5 working days, free over SAR 75. Returns are free within 30
                 days, in original condition.
               </p>
             </details>
@@ -360,31 +382,33 @@ export function ProductDetail({
         </div>
       </div>
 
-      <section className="mt-16 border-t border-line pt-10">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-olive">
-              Keep looking
-            </p>
-            <h2 className="mt-2 font-heading text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-              You may also like
-            </h2>
+      {related.length > 0 && (
+        <section className="mt-16 border-t border-line pt-10">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-olive">
+                Keep looking
+              </p>
+              <h2 className="mt-2 font-heading text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+                You may also like
+              </h2>
+            </div>
+            <Link
+              href={`/shop?category=${product.category}`}
+              className="group inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink/60 transition-colors hover:text-ink"
+            >
+              More in {category?.name}
+              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </Link>
           </div>
-          <Link
-            href={`/shop?category=${product.category}`}
-            className="group inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink/60 transition-colors hover:text-ink"
-          >
-            More in {category?.name}
-            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-          </Link>
-        </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {related.map((item) => (
-            <ProductCard key={item.id} product={item} />
-          ))}
-        </div>
-      </section>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {related.map((item) => (
+              <ProductCard key={item.id} product={item} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

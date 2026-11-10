@@ -29,7 +29,7 @@ const faqs = [
   {
     question: "How long does delivery take?",
     answer:
-      "Standard delivery arrives in 3-5 working days and is free on orders over $75. Express delivery arrives in 1-2 working days for $12. Every order includes tracking.",
+      "Standard delivery arrives in 3-5 working days and is free on orders over SAR 75. Express delivery arrives in 1-2 working days for SAR 12. Every order includes tracking.",
   },
   {
     question: "Can I change or cancel an order?",
@@ -117,7 +117,7 @@ export default function HelpPage() {
                   Standard delivery
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink/50">
-                  3-5 working days. Free over $75, otherwise $6. Tracked.
+                  3-5 working days. Free over SAR 75, otherwise SAR 6. Tracked.
                 </p>
               </div>
               <div className="rounded-xl bg-cream p-4">
@@ -125,7 +125,7 @@ export default function HelpPage() {
                   Express delivery
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink/50">
-                  1-2 working days. $12 flat. Tracked and signed where possible.
+                  1-2 working days. SAR 12 flat. Tracked and signed where possible.
                 </p>
               </div>
             </div>

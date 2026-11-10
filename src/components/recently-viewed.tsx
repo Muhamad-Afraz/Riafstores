@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatPrice, getCategoryName } from "@/lib/products";
 import { useStore } from "./store";
-import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 
 export function RecentlyViewed({ excludeId }: { excludeId?: string }) {
   const { recentProducts, hydrated } = useStore();
@@ -34,9 +34,8 @@ export function RecentlyViewed({ excludeId }: { excludeId?: string }) {
               className="group flex items-center gap-3 rounded-xl border border-line bg-white/40 p-2.5 transition-colors hover:border-ink/25"
             >
               <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-beige">
-                <ProductArt
-                  art={product.art}
-                  tone={product.gallery[0]}
+                <ProductImage
+                  product={product}
                   className="h-full w-full transition-transform duration-300 group-hover:scale-[1.04]"
                 />
               </span>

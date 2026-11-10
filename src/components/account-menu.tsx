@@ -120,10 +120,10 @@ export function AccountMenu({ variant = "desktop" }: AccountMenuProps) {
           id={menuId}
           role="menu"
           aria-label="Account"
-          className={`panel-in absolute right-0 top-full z-50 mt-2 rounded-2xl border border-line bg-cream p-2 shadow-[0_24px_60px_-36px_rgba(32,31,28,0.65)] ${
+          className={`panel-in z-50 rounded-2xl border border-line bg-cream p-2 shadow-[0_24px_60px_-36px_rgba(32,31,28,0.65)] ${
             variant === "desktop"
-              ? "w-[300px]"
-              : "w-[min(18rem,calc(100vw_-_2rem))]"
+              ? "absolute right-0 top-full mt-2 w-[300px]"
+              : "fixed inset-x-4 top-[7.5rem]"
           }`}
         >
           {!hydrated ? (

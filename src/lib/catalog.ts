@@ -48,6 +48,10 @@ function isProduct(value: unknown): value is Product {
     artKeys.includes(product.art as ArtKey) &&
     Array.isArray(product.gallery) &&
     product.gallery.every((tone) => tones.includes(tone)) &&
+    (product.image === undefined || typeof product.image === "string") &&
+    (product.images === undefined ||
+      (Array.isArray(product.images) &&
+        product.images.every((image) => typeof image === "string"))) &&
     Array.isArray(product.variants) &&
     product.variants.every((variant) => typeof variant === "string") &&
     typeof product.stock === "number"
@@ -123,15 +127,8 @@ async function addDatabaseProduct(product: Product) {
   );
 }
 
-async function removeDatabaseProduct(id: string) {
-  const rows = await dbQuery<{ data: unknown }>(
-    "SELECT data FROM catalog_entries WHERE id = $1",
-    [id],
-  );
-  const existing = rows[0];
-  const isCustom = Boolean(existing && isProduct(existing.data));
-
-  if (isCustom) {
+async function removeDatabaseProduct(id: string, isBaseProduct: boolean) {
+  if (!isBaseProduct) {
     await dbQuery("DELETE FROM catalog_entries WHERE id = $1", [id]);
     return;
   }
@@ -151,10 +148,18 @@ async function removeDatabaseProduct(id: string) {
 export async function getCatalogProducts() {
   const catalog = await readCatalog();
   const removed = new Set(catalog.removed);
-  return [
-    ...baseProducts.filter((product) => !removed.has(product.id)),
-    ...catalog.added.filter((product) => !removed.has(product.id)),
-  ];
+  const overrides = new Map(catalog.added.map((product) => [product.id, product]));
+  const baseIds = new Set(baseProducts.map((product) => product.id));
+
+  const base = baseProducts
+    .filter((product) => !removed.has(product.id))
+    .map((product) => overrides.get(product.id) ?? product);
+
+  const custom = catalog.added.filter(
+    (product) => !baseIds.has(product.id) && !removed.has(product.id),
+  );
+
+  return [...base, ...custom];
 }
 
 export async function getCatalogProductBySlug(slug: string) {
@@ -183,15 +188,16 @@ export async function addCatalogProduct(product: Product) {
 }
 
 export async function removeCatalogProduct(id: string) {
+  const isBaseProduct = baseProducts.some((product) => product.id === id);
+
   if (isDatabaseConfigured()) {
-    await removeDatabaseProduct(id);
+    await removeDatabaseProduct(id, isBaseProduct);
     return;
   }
 
   const catalog = await readFileCatalog();
-  const isCustom = catalog.added.some((product) => product.id === id);
   catalog.added = catalog.added.filter((product) => product.id !== id);
-  if (!isCustom) {
+  if (isBaseProduct) {
     catalog.removed = Array.from(new Set([...catalog.removed, id]));
   }
   await writeFileCatalog(catalog);

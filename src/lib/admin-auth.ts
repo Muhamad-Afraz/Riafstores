@@ -25,6 +25,14 @@ export function isAdminConfigured() {
   return Boolean(adminEmail() && adminPassword() && sessionSecret());
 }
 
+export function adminEmailAddress() {
+  return adminEmail();
+}
+
+export function isAdminOtpRequired() {
+  return process.env.ADMIN_OTP_DISABLED !== "true";
+}
+
 function safeEqual(a: string, b: string) {
   const left = Buffer.from(a);
   const right = Buffer.from(b);

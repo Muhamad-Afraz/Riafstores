@@ -18,8 +18,8 @@ export const discountCodes: DiscountCode[] = [
     code: "RIAF15",
     percent: 15,
     minSubtotal: 100,
-    label: "15% off orders over $100",
-    description: "A limited offer on orders over $100 with code RIAF15.",
+    label: "15% off orders over SAR 100",
+    description: "A limited offer on orders over SAR 100 with code RIAF15.",
   },
 ];
 

@@ -157,7 +157,7 @@ export function ShopView({ products }: { products: Product[] }) {
               Limited offer
             </p>
             <p className="mt-0.5 text-[12px] font-semibold">
-              {`${FEATURED_OFFER.percent}% off orders over $${FEATURED_OFFER.minSubtotal}`}
+              {`${FEATURED_OFFER.percent}% off orders over SAR ${FEATURED_OFFER.minSubtotal}`}
             </p>
           </div>
         </div>

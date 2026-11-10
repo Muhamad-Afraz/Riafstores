@@ -1,5 +1,7 @@
 node_modules
 .next
+.next-dev
+.next-test
 out
 build
 .env
@@ -11,3 +13,7 @@ next-env.d.ts
 data/accounts.json
 data/login-challenges.json
 data/*.tmp
+
+# Admin-uploaded product pictures (stored on disk in local development).
+public/uploads/products/*
+!public/uploads/products/.gitkeep

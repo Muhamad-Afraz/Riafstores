@@ -113,7 +113,7 @@ const LEGACY_KEYS = [
 ];
 
 const NETWORK_ERROR =
-  "We could not reach the sign-in service. Check your connection and try again.";
+  "We could not reach the RIAF service. Check your connection and try again.";
 
 function isAccountUser(value: unknown): value is AccountUser {
   if (typeof value !== "object" || value === null) return false;

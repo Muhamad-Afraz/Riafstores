@@ -3,6 +3,7 @@ import {
   categories,
   formatPrice,
   formatReviews,
+  getCategoryName,
   type Product,
 } from "@/lib/products";
 import { getCatalogProducts } from "@/lib/catalog";
@@ -22,6 +23,7 @@ import { Marquee } from "@/components/marquee";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { OfferCountdown } from "@/components/offer-countdown";
 import { ProductArt } from "@/components/product-art";
+import { ProductImage } from "@/components/product-image";
 import { ProductCard } from "@/components/product-card";
 import { PromoCode } from "@/components/promo-code";
 import { Reveal } from "@/components/reveal";
@@ -29,7 +31,7 @@ import { Reveal } from "@/components/reveal";
 const assurances = [
   {
     icon: Truck,
-    title: "Free shipping over $75",
+    title: "Free shipping over SAR 75",
     body: "Tracked delivery in 3-5 working days.",
   },
   {
@@ -52,7 +54,7 @@ const assurances = [
 const marqueeWords = [
   "Considered by design",
   "Made to last",
-  "Free shipping over $75",
+  "Free shipping over SAR 75",
   "30-day returns",
   "2-year warranty",
   "Fewer, better things",
@@ -63,8 +65,15 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const catalog = await getCatalogProducts();
   const heroProduct =
-    catalog.find((product) => product.slug === "riaf-buds-pro") ?? catalog[0];
-  const featuredProducts = [
+    catalog.find((product) => product.slug === "riaf-buds-pro-2") ??
+    catalog.find((product) => product.slug === "riaf-buds-pro") ??
+    catalog[0];
+
+  const bestsellerProducts = [...catalog]
+    .sort((a, b) => b.popularity - a.popularity)
+    .slice(0, 4);
+
+  const curatedFeatured = [
     "buds-pro",
     "everyday-hoodie",
     "halo-lamp",
@@ -72,21 +81,28 @@ export default async function HomePage() {
   ]
     .map((id) => catalog.find((product) => product.id === id))
     .filter((product): product is Product => Boolean(product));
-  const bestsellerProducts = [...catalog]
-    .sort((a, b) => b.popularity - a.popularity)
-    .slice(0, 4);
+
+  const featuredProducts =
+    curatedFeatured.length > 0
+      ? curatedFeatured
+      : bestsellerProducts.slice(0, 4);
+
   const offerProducts = catalog
     .filter((product) => product.compareAt)
     .sort((a, b) => b.popularity - a.popularity)
     .slice(0, 3);
   const limitedProducts =
     offerProducts.length > 0 ? offerProducts : bestsellerProducts.slice(0, 3);
-  const heroDiscount = heroProduct.compareAt
+
+  const heroDiscount = heroProduct?.compareAt
     ? Math.round((1 - heroProduct.price / heroProduct.compareAt) * 100)
     : 0;
-  const heroSaving = heroProduct.compareAt
+  const heroSaving = heroProduct?.compareAt
     ? heroProduct.compareAt - heroProduct.price
     : 0;
+  const heroHref = heroProduct ? `/product/${heroProduct.slug}` : "/shop";
+  const heroTone = heroProduct?.gallery[0] ?? "dark";
+  const heroArt = heroProduct?.art ?? "earbuds";
 
   return (
     <>
@@ -107,11 +123,14 @@ export default async function HomePage() {
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white/55 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/60">
                     <span className="h-1.5 w-1.5 rounded-full bg-olive" />
-                    New release — {heroProduct.name}
+                    New release —{" "}
+                    {heroProduct ? heroProduct.name : "the RIAF edit"}
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-ink/45">
                     <Star className="h-3 w-3 text-olive" />
-                    {heroProduct.rating.toFixed(1)} / 5
+                    {heroProduct
+                      ? `${heroProduct.rating.toFixed(1)} / 5`
+                      : "New season"}
                   </span>
                 </div>
 
@@ -123,16 +142,16 @@ export default async function HomePage() {
 
                 <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink/60">
                   A close edit of tech, fashion, accessories and home objects.
-                  Start with our flagship wireless earbuds, then find the quiet
-                  essentials around them.
+                  Begin with what is new, then find the quiet essentials around
+                  it.
                 </p>
 
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <Link
-                    href={`/product/${heroProduct.slug}`}
+                    href={heroHref}
                     className="group inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3.5 text-[13px] font-semibold text-cream transition-colors hover:bg-olive"
                   >
-                    Shop the Buds Pro
+                    {heroProduct ? `Shop ${heroProduct.name}` : "Shop the edit"}
                     <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </Link>
                   <Link
@@ -143,19 +162,24 @@ export default async function HomePage() {
                   </Link>
                 </div>
 
-                <div className="mt-7 flex max-w-lg flex-wrap items-center gap-3 rounded-2xl border border-line bg-white/45 p-3 sm:p-4">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-olive-soft text-olive">
-                    <Tag className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-olive">
-                      Limited offer
-                    </p>
-                    <p className="mt-0.5 text-[12px] font-semibold text-ink">
-                      15% off orders over $100
-                    </p>
+                <div className="mt-7 flex max-w-lg flex-col gap-3 rounded-2xl border border-line bg-white/45 p-3 sm:flex-row sm:items-center sm:p-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-olive-soft text-olive">
+                      <Tag className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-olive">
+                        Limited offer
+                      </p>
+                      <p className="mt-0.5 text-[12px] font-semibold text-ink">
+                        15% off orders over SAR 100
+                      </p>
+                    </div>
                   </div>
-                  <PromoCode code={FEATURED_OFFER.code} />
+                  <PromoCode
+                    code={FEATURED_OFFER.code}
+                    className="w-full justify-center sm:ml-auto sm:w-auto"
+                  />
                 </div>
 
                 <div className="mt-9 grid max-w-md grid-cols-3 gap-5 border-t border-line pt-6">
@@ -163,27 +187,31 @@ export default async function HomePage() {
                     <div className="flex items-center gap-1">
                       <Star className="h-3.5 w-3.5 text-olive" />
                       <span className="font-heading text-lg font-bold text-ink">
-                        {heroProduct.rating.toFixed(1)}
+                        {heroProduct ? heroProduct.rating.toFixed(1) : "—"}
                       </span>
                     </div>
                     <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-ink/40">
-                      {formatReviews(heroProduct.reviews)} reviews
+                      {formatReviews(heroProduct?.reviews ?? 0)} reviews
                     </p>
                   </div>
                   <div>
                     <p className="font-heading text-lg font-bold text-ink">
-                      36h
+                      {heroProduct
+                        ? heroProduct.stock > 0
+                          ? "In stock"
+                          : "Sold out"
+                        : "Restocking"}
                     </p>
                     <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-ink/40">
-                      Total playtime
+                      Availability
                     </p>
                   </div>
                   <div>
                     <p className="font-heading text-lg font-bold text-ink">
-                      42 dB
+                      2-year
                     </p>
                     <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-ink/40">
-                      Adaptive ANC
+                      Warranty
                     </p>
                   </div>
                 </div>
@@ -197,12 +225,23 @@ export default async function HomePage() {
                   className="absolute -inset-3 rounded-[40px] border border-line/70"
                 />
                 <div className="relative overflow-hidden rounded-[32px] border border-line bg-beige shadow-[0_40px_90px_-60px_rgba(32,31,28,0.6)]">
-                  <ProductArt
-                    art="earbuds"
-                    tone="dark"
-                    title="Riaf Buds Pro in Obsidian"
-                    className="aspect-[5/4] h-full w-full"
-                  />
+                  {heroProduct ? (
+                    <ProductImage
+                      product={heroProduct}
+                      alt={`${heroProduct.name} in ${getCategoryName(
+                        heroProduct.category
+                      )}`}
+                      loading="eager"
+                      className="aspect-[5/4] h-full w-full"
+                    />
+                  ) : (
+                    <ProductArt
+                      art={heroArt}
+                      tone={heroTone}
+                      title="The RIAF edit"
+                      className="aspect-[5/4] h-full w-full"
+                    />
+                  )}
                   <div
                     aria-hidden
                     className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink/25 to-transparent"
@@ -210,7 +249,10 @@ export default async function HomePage() {
                 </div>
 
                 <span className="absolute left-4 top-4 rounded-full border border-cream/20 bg-ink/80 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-cream backdrop-blur">
-                  01 / Flagship audio
+                  01 /{" "}
+                  {heroProduct
+                    ? getCategoryName(heroProduct.category)
+                    : "The edit"}
                 </span>
                 {heroDiscount > 0 && (
                   <span className="absolute right-4 top-4 rounded-full bg-olive px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-cream">
@@ -220,19 +262,23 @@ export default async function HomePage() {
 
                 <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-cream/10 bg-ink/92 p-4 text-cream backdrop-blur sm:left-6 sm:right-auto sm:w-[285px]">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-heading text-[15px] font-bold">
-                        {heroProduct.name}
+                        {heroProduct ? heroProduct.name : "The RIAF edit"}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-cream/55">
-                        Obsidian · Adaptive ANC
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-cream/55">
+                        {heroProduct
+                          ? heroProduct.tagline
+                          : "Considered everyday objects."}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <span className="font-heading text-[15px] font-bold">
-                        {formatPrice(heroProduct.price)}
-                      </span>
-                      {heroProduct.compareAt && (
+                    <div className="shrink-0 text-right">
+                      {heroProduct && (
+                        <span className="block whitespace-nowrap font-heading text-[15px] font-bold">
+                          {formatPrice(heroProduct.price)}
+                        </span>
+                      )}
+                      {heroProduct?.compareAt && (
                         <span className="mt-0.5 block text-[10px] text-cream/35 line-through">
                           {formatPrice(heroProduct.compareAt)}
                         </span>
@@ -240,7 +286,7 @@ export default async function HomePage() {
                     </div>
                   </div>
                   <Link
-                    href={`/product/${heroProduct.slug}`}
+                    href={heroHref}
                     className="mt-3 flex items-center justify-between border-t border-cream/15 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/75 transition-colors hover:text-cream"
                   >
                     Shop now
@@ -305,7 +351,7 @@ export default async function HomePage() {
                 </h2>
 
                 <p className="mt-4 max-w-md text-[13px] leading-relaxed text-cream/55">
-                  {`Take ${FEATURED_OFFER.percent}% off orders over $${FEATURED_OFFER.minSubtotal} across the edit. A quieter cart, a better price. Ends Sunday.`}
+                  {`Take ${FEATURED_OFFER.percent}% off orders over SAR ${FEATURED_OFFER.minSubtotal} across the edit. A quieter cart, a better price. Ends Sunday.`}
                 </p>
 
                 <div className="mt-7 flex flex-col gap-5 sm:flex-row sm:items-end">
@@ -336,53 +382,54 @@ export default async function HomePage() {
                 </Link>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cream/35">
-                  <span>Included in the edit</span>
-                  <span>{limitedProducts.length} pieces</span>
-                </div>
+              {limitedProducts.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-cream/35">
+                    <span>Included in the edit</span>
+                    <span>{limitedProducts.length} pieces</span>
+                  </div>
 
-                <div className="mt-3 space-y-2.5">
-                  {limitedProducts.map((product) => (
-                    <Link
-                      key={product.id}
-                      href={`/product/${product.slug}`}
-                      className="group flex items-center gap-3 rounded-2xl border border-cream/10 bg-cream/[0.04] p-2.5 transition-colors hover:border-cream/20 hover:bg-cream/[0.08]"
-                    >
-                      <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-cream/10 bg-beige">
-                        <ProductArt
-                          art={product.art}
-                          tone={product.gallery[0]}
-                          title={product.name}
-                          className="h-full w-full"
-                        />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[12px] font-semibold text-cream">
-                          {product.name}
+                  <div className="mt-3 space-y-2.5">
+                    {limitedProducts.map((product) => (
+                      <Link
+                        key={product.id}
+                        href={`/product/${product.slug}`}
+                        className="group flex items-center gap-3 rounded-2xl border border-cream/10 bg-cream/[0.04] p-2.5 transition-colors hover:border-cream/20 hover:bg-cream/[0.08]"
+                      >
+                        <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-cream/10 bg-beige">
+                          <ProductImage
+                            product={product}
+                            alt={product.name}
+                            className="h-full w-full"
+                          />
                         </span>
-                        <span className="mt-0.5 block text-[10px] text-cream/40">
-                          {product.compareAt
-                            ? `Save ${formatPrice(
-                                product.compareAt - product.price
-                              )}`
-                            : "Included in the offer"}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-right">
-                        <span className="block font-heading text-[12px] font-bold text-cream">
-                          {formatPrice(product.price)}
-                        </span>
-                        {product.compareAt && (
-                          <span className="mt-0.5 block text-[9px] text-cream/30 line-through">
-                            {formatPrice(product.compareAt)}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[12px] font-semibold text-cream">
+                            {product.name}
                           </span>
-                        )}
-                      </span>
-                    </Link>
-                  ))}
+                          <span className="mt-0.5 block text-[10px] text-cream/40">
+                            {product.compareAt
+                              ? `Save ${formatPrice(
+                                  product.compareAt - product.price
+                                )}`
+                              : "Included in the offer"}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right">
+                          <span className="block font-heading text-[12px] font-bold text-cream">
+                            {formatPrice(product.price)}
+                          </span>
+                          {product.compareAt && (
+                            <span className="mt-0.5 block text-[9px] text-cream/30 line-through">
+                              {formatPrice(product.compareAt)}
+                            </span>
+                          )}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </Reveal>
@@ -456,35 +503,37 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 sm:pb-16">
-        <Reveal>
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-olive">
-                The edit
-              </p>
-              <h2 className="mt-2 font-heading text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-                Featured this week
-              </h2>
+      {featuredProducts.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 sm:pb-16">
+          <Reveal>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-olive">
+                  The edit
+                </p>
+                <h2 className="mt-2 font-heading text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                  Featured this week
+                </h2>
+              </div>
+              <Link
+                href="/shop"
+                className="group inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink/65 transition-colors hover:text-ink"
+              >
+                Shop all
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </Link>
             </div>
-            <Link
-              href="/shop"
-              className="group inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink/65 transition-colors hover:text-ink"
-            >
-              Shop all
-              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </Link>
-          </div>
-        </Reveal>
+          </Reveal>
 
-        <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredProducts.map((product, index) => (
-            <Reveal key={product.id} delay={index * 55}>
-              <ProductCard product={product} />
-            </Reveal>
-          ))}
-        </div>
-      </section>
+          <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredProducts.map((product, index) => (
+              <Reveal key={product.id} delay={index * 55}>
+                <ProductCard product={product} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="border-y border-line bg-beige/25 py-5">
         <Marquee
@@ -502,90 +551,93 @@ export default async function HomePage() {
         />
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
-        <Reveal>
-          <div className="grid overflow-hidden rounded-[32px] bg-ink text-cream lg:grid-cols-2">
-            <div className="relative order-2 min-h-[320px] lg:order-1">
-              <ProductArt
-                art="earbuds"
-                tone="olive"
-                title="Riaf Buds Pro in Olive"
-                className="h-full w-full"
-              />
-              <div
-                aria-hidden
-                className="absolute inset-0 bg-gradient-to-t from-ink/45 via-transparent to-transparent"
-              />
-              <span className="absolute left-5 top-5 rounded-full border border-cream/20 bg-ink/40 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-cream backdrop-blur">
-                Sound, distilled
-              </span>
-              <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
-                <p className="max-w-[180px] text-[11px] leading-relaxed text-cream/65">
-                  Adaptive ANC, warm drivers, all-day comfort.
-                </p>
-                <span className="rounded-full border border-cream/15 bg-ink/45 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-cream/70 backdrop-blur">
-                  IPX5
+      {heroProduct && (
+        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
+          <Reveal>
+            <div className="grid overflow-hidden rounded-[32px] bg-ink text-cream lg:grid-cols-2">
+              <div className="relative order-2 min-h-[320px] lg:order-1">
+                <ProductImage
+                  product={heroProduct}
+                  index={1}
+                  alt={heroProduct.name}
+                  className="h-full w-full"
+                />
+                <div
+                  aria-hidden
+                  className="absolute inset-0 bg-gradient-to-t from-ink/45 via-transparent to-transparent"
+                />
+                <span className="absolute left-5 top-5 rounded-full border border-cream/20 bg-ink/40 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-cream backdrop-blur">
+                  {getCategoryName(heroProduct.category)}
                 </span>
-              </div>
-            </div>
-
-            <div className="order-1 flex flex-col justify-center p-7 sm:p-10 lg:order-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cream/40">
-                Flagship audio
-              </p>
-              <h2 className="mt-3 font-heading text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-                Better sound,
-                <br />
-                without the noise.
-              </h2>
-              <p className="mt-4 max-w-md text-[13px] leading-relaxed text-cream/55">
-                {heroProduct.description}
-              </p>
-
-              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                {heroProduct.features.slice(0, 4).map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-2 text-[12px] text-cream/70"
-                  >
-                    <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-cream/10">
-                      <Check className="h-2.5 w-2.5" />
-                    </span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Link
-                  href={`/product/${heroProduct.slug}`}
-                  className="group inline-flex items-center gap-2 rounded-full bg-cream px-6 py-3.5 text-[13px] font-semibold text-ink transition-colors hover:bg-beige"
-                >
-                  Shop {heroProduct.name}
-                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </Link>
-                <div>
-                  <span className="font-heading text-lg font-bold">
-                    {formatPrice(heroProduct.price)}
+                <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
+                  <p className="max-w-[180px] text-[11px] leading-relaxed text-cream/65">
+                    {heroProduct.tagline}
+                  </p>
+                  <span className="rounded-full border border-cream/15 bg-ink/45 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-cream/70 backdrop-blur">
+                    {heroProduct.badge ?? "New"}
                   </span>
-                  {heroProduct.compareAt && (
-                    <span className="ml-2 text-[11px] font-normal text-cream/35 line-through">
-                      {formatPrice(heroProduct.compareAt)}
+                </div>
+              </div>
+
+              <div className="order-1 flex flex-col justify-center p-7 sm:p-10 lg:order-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cream/40">
+                  {getCategoryName(heroProduct.category)}
+                </p>
+                <h2 className="mt-3 font-heading text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+                  Considered in
+                  <br />
+                  every detail.
+                </h2>
+                <p className="mt-4 max-w-md text-[13px] leading-relaxed text-cream/55">
+                  {heroProduct.description}
+                </p>
+
+                <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {heroProduct.features.slice(0, 4).map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2 text-[12px] text-cream/70"
+                    >
+                      <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-cream/10">
+                        <Check className="h-2.5 w-2.5" />
+                      </span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-8 flex flex-wrap items-center gap-4">
+                  <Link
+                    href={`/product/${heroProduct.slug}`}
+                    className="group inline-flex items-center gap-2 rounded-full bg-cream px-6 py-3.5 text-[13px] font-semibold text-ink transition-colors hover:bg-beige"
+                  >
+                    Shop {heroProduct.name}
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </Link>
+                  <div>
+                    <span className="font-heading text-lg font-bold">
+                      {formatPrice(heroProduct.price)}
                     </span>
-                  )}
-                  {heroSaving > 0 && (
-                    <span className="ml-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#c8d4b9]">
-                      Save {formatPrice(heroSaving)}
-                    </span>
-                  )}
+                    {heroProduct.compareAt && (
+                      <span className="ml-2 text-[11px] font-normal text-cream/35 line-through">
+                        {formatPrice(heroProduct.compareAt)}
+                      </span>
+                    )}
+                    {heroSaving > 0 && (
+                      <span className="ml-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#c8d4b9]">
+                        Save {formatPrice(heroSaving)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </Reveal>
-      </section>
+          </Reveal>
+        </section>
+      )}
 
-      <section className="border-y border-line bg-beige/45 py-14 sm:py-16">
+      {bestsellerProducts.length > 0 && (
+        <section className="border-y border-line bg-beige/45 py-14 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <Reveal>
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -615,7 +667,8 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+        </section>
+      )}
 
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">

@@ -40,6 +40,10 @@ export type Product = {
   badge?: string;
   art: ArtKey;
   gallery: Tone[];
+  /** Main product picture (uploaded file URL or remote image URL). */
+  image?: string;
+  /** Additional showcase pictures, shown after the main picture. */
+  images?: string[];
   description: string;
   details: string[];
   features: string[];
@@ -596,6 +600,20 @@ export function getProductBySlug(slug: string) {
   return products.find((product) => product.slug === slug);
 }
 
+/**
+ * All uploaded pictures for a product, main picture first.
+ * Returns an empty array when the product still uses the illustrated fallback.
+ */
+export function getProductImages(
+  product: Pick<Product, "image" | "images">,
+) {
+  const sources = [product.image, ...(product.images ?? [])]
+    .map((source) => (typeof source === "string" ? source.trim() : ""))
+    .filter(Boolean);
+
+  return Array.from(new Set(sources));
+}
+
 export function getProductById(id: string) {
   return products.find((product) => product.id === id);
 }
@@ -632,7 +650,10 @@ export function matchesQuery(product: Product, query: string) {
 }
 
 export function formatPrice(value: number) {
-  return `$${value.toFixed(0)}`;
+  return `SAR ${value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function formatReviews(value: number) {

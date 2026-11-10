@@ -9,7 +9,7 @@ import {
 } from "@/lib/products";
 import { useStore } from "./store";
 import { Heart, Plus, Star } from "./icons";
-import { ProductArt } from "./product-art";
+import { ProductImage } from "./product-image";
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem, isWishlisted, toggleWishlist } = useStore();
@@ -28,10 +28,9 @@ export function ProductCard({ product }: { product: Product }) {
           aria-label={`View ${product.name}`}
           className="block h-full w-full"
         >
-          <ProductArt
-            art={product.art}
-            tone={product.gallery[0]}
-            title={product.name}
+          <ProductImage
+            product={product}
+            alt={product.name}
             className="h-full w-full transition-transform duration-700 ease-out group-hover:scale-[1.045]"
           />
         </Link>

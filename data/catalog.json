@@ -1,4 +1,61 @@
 {
-  "added": [],
-  "removed": []
+  "added": [
+    {
+      "id": "custom-riaf-buds-pro-2-mw9j2njm",
+      "slug": "riaf-buds-pro-2",
+      "name": "RIAF buds pro",
+      "tagline": "premium, high quality earbuds. smooth and clear sound, meant to last",
+      "category": "electronics",
+      "price": 29,
+      "rating": 5,
+      "reviews": 0,
+      "art": "earbuds",
+      "gallery": [
+        "dark"
+      ],
+      "description": "Experience premium sound with our high-quality wireless earbuds, designed for exceptional audio clarity, deep immersive bass, and crystal-clear calls. Featuring a sleek, modern design, comfortable all-day fit, and reliable Bluetooth connectivity, these earbuds deliver the perfect balance of performance, style, and convenience. Ideal for music, gaming, calls, and everyday use.",
+      "details": [
+        "premium",
+        "high quality earbuds. smooth and clear sound",
+        "meant to last"
+      ],
+      "features": [
+        "Free shipping over SAR 75",
+        "30-day returns and exchanges",
+        "2-year warranty"
+      ],
+      "variantLabel": "Style",
+      "variants": [
+        "Standard"
+      ],
+      "stock": 10,
+      "createdAt": "2026-11-09T17:21:16.978Z",
+      "popularity": 0,
+      "image": "/uploads/products/1794300185421-f40e3f32-5f46-42b5-923a-b510728e5d84.jpg",
+      "images": [
+        "/uploads/products/1794300187740-94ad5aff-9e0a-4885-8558-96fa6484fdbd.avif",
+        "/uploads/products/1794300189751-695295d0-b554-4f2a-bc4e-2654f648d2f9.webp",
+        "/uploads/products/1794300192530-c26bb8ba-cd7c-4c01-b16d-82e9393a441f.jpg",
+        "/uploads/products/1794300195829-aed1df85-1fe4-4893-8080-8423c9abbe0a.jpg"
+      ]
+    }
+  ],
+  "removed": [
+    "field-cap",
+    "studio-anc",
+    "buds-case",
+    "studio-socks",
+    "stoneware-mug",
+    "braided-cable",
+    "linen-throw",
+    "halo-lamp",
+    "frame-sunglasses",
+    "everyday-hoodie",
+    "mini-speaker",
+    "everyday-sling",
+    "essential-tee",
+    "buds-lite",
+    "cedar-candle",
+    "buds-pro"
+  ]
 }

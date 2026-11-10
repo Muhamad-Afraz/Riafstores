@@ -9,8 +9,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import { findDiscountCode, type DiscountCode } from "@/lib/offers";
 import {
+  formatPrice,
   products as baseProducts,
   type ArtKey,
   type Product,
@@ -42,7 +44,10 @@ type AddItemOptions = {
 
 type StoreContextValue = {
   items: CartItem[];
+  availableItems: CartItem[];
+  unavailableItems: CartItem[];
   count: number;
+  availableCount: number;
   subtotal: number;
   discount: number;
   shipping: number;
@@ -56,10 +61,12 @@ type StoreContextValue = {
   recentIds: string[];
   recentProducts: Product[];
   catalog: Product[];
+  catalogReady: boolean;
   notice: Notice | null;
   hydrated: boolean;
   addItem: (product: Product, options?: AddItemOptions) => void;
   removeItem: (key: string) => void;
+  removeUnavailable: () => void;
   updateQuantity: (key: string, quantity: number) => void;
   clearCart: () => void;
   isWishlisted: (productId: string) => boolean;
@@ -110,10 +117,12 @@ function readStringArray(raw: string | null) {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [items, setItems] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [catalog, setCatalog] = useState<Product[]>(baseProducts);
+  const [catalogReady, setCatalogReady] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -153,6 +162,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .then((data) => {
           if (active && data && Array.isArray(data.products)) {
             setCatalog(data.products as Product[]);
+            setCatalogReady(true);
           }
         })
         .catch(() => {
@@ -173,7 +183,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", loadCatalog);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -234,16 +244,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       setAppliedCode(coupon.code);
 
-      const currentSubtotal = items.reduce(
-        (total, item) => total + item.price * item.quantity,
-        0
-      );
+      const currentSubtotal = items.reduce((total, item) => {
+        const available =
+          !catalogReady ||
+          catalog.some((product) => product.id === item.productId);
+        return available ? total + item.price * item.quantity : total;
+      }, 0);
 
       if (coupon.minSubtotal > 0 && currentSubtotal < coupon.minSubtotal) {
         return {
           ok: true,
-          message: `Code saved. Add $${Math.ceil(
-            coupon.minSubtotal - currentSubtotal
+          message: `Code saved. Add ${formatPrice(
+            Math.ceil(coupon.minSubtotal - currentSubtotal)
           )} more to unlock ${coupon.percent}% off.`,
         };
       }
@@ -253,7 +265,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         message: `${coupon.code} applied. You saved ${coupon.percent}%.`,
       };
     },
-    [items]
+    [items, catalog, catalogReady]
   );
 
   const removeCoupon = useCallback(() => {
@@ -263,6 +275,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback(
     (product: Product, options: AddItemOptions = {}) => {
+      if (product.stock <= 0) {
+        notify(`${product.name} is sold out`);
+        return;
+      }
+
       const variant = options.variant ?? product.variants[0];
       const tone = options.tone ?? product.gallery[0];
       const quantity = Math.max(1, options.quantity ?? 1);
@@ -314,20 +331,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [notify]
   );
 
-  const updateQuantity = useCallback((key: string, quantity: number) => {
-    setItems((current) =>
-      current
-        .map((item) =>
-          item.key === key
-            ? {
-                ...item,
-                quantity: Math.min(99, Math.max(0, Math.floor(quantity))),
-              }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-  }, []);
+  const removeUnavailable = useCallback(() => {
+    if (!catalogReady) return;
+
+    setItems((current) => {
+      const available = new Set(catalog.map((product) => product.id));
+      return current.filter((item) => available.has(item.productId));
+    });
+    notify("Unavailable items removed");
+  }, [catalog, catalogReady, notify]);
+
+  const updateQuantity = useCallback(
+    (key: string, quantity: number) => {
+      setItems((current) =>
+        current
+          .map((item) => {
+            if (item.key !== key) return item;
+            const product = catalog.find(
+              (entry) => entry.id === item.productId
+            );
+            const max = Math.min(99, product ? product.stock : 99);
+            return {
+              ...item,
+              quantity: Math.min(max, Math.max(0, Math.floor(quantity))),
+            };
+          })
+          .filter((item) => item.quantity > 0)
+      );
+    },
+    [catalog]
+  );
 
   const clearCart = useCallback(() => {
     setItems([]);
@@ -360,8 +393,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<StoreContextValue>(() => {
+    const catalogIds = new Set(catalog.map((product) => product.id));
+    const availableItems = catalogReady
+      ? items.filter((item) => catalogIds.has(item.productId))
+      : items;
+    const unavailableItems = catalogReady
+      ? items.filter((item) => !catalogIds.has(item.productId))
+      : [];
+
     const count = items.reduce((total, item) => total + item.quantity, 0);
-    const subtotal = items.reduce(
+    const availableCount = availableItems.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
+    const subtotal = availableItems.reduce(
       (total, item) => total + item.price * item.quantity,
       0
     );
@@ -386,7 +431,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     return {
       items,
+      availableItems,
+      unavailableItems,
       count,
+      availableCount,
       subtotal,
       discount,
       shipping,
@@ -400,10 +448,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recentIds,
       recentProducts,
       catalog,
+      catalogReady,
       notice,
       hydrated,
       addItem,
       removeItem,
+      removeUnavailable,
       updateQuantity,
       clearCart,
       isWishlisted,
@@ -417,6 +467,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     wishlist,
     recentIds,
     catalog,
+    catalogReady,
     notice,
     hydrated,
     appliedCode,
@@ -424,6 +475,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     removeCoupon,
     addItem,
     removeItem,
+    removeUnavailable,
     updateQuantity,
     clearCart,
     isWishlisted,

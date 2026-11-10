@@ -8,11 +8,12 @@ import {
   ArrowRight,
   Close,
   LogOut,
+  Pencil,
   Plus,
   Search,
   Trash,
 } from "@/components/icons";
-import { ProductArt } from "@/components/product-art";
+import { ProductImage } from "@/components/product-image";
 import {
   categories,
   formatPrice,
@@ -20,35 +21,17 @@ import {
   type CategorySlug,
   type Product,
 } from "@/lib/products";
-
-type ProductForm = {
-  name: string;
-  category: CategorySlug;
-  price: string;
-  stock: string;
-  tagline: string;
-  description: string;
-  badge: string;
-};
+import {
+  emptyForm,
+  formToPayload,
+  productToForm,
+  ProductFormPanel,
+  type ProductForm,
+} from "./product-form-panel";
 
 type SortValue = "newest" | "name" | "price-asc" | "price-desc";
 
-const emptyForm: ProductForm = {
-  name: "",
-  category: "electronics",
-  price: "",
-  stock: "10",
-  tagline: "",
-  description: "",
-  badge: "",
-};
-
 const PAGE_SIZE = 10;
-
-const inputClass =
-  "mt-2 h-11 w-full rounded-xl border border-line bg-cream px-3.5 text-[13px] text-ink outline-none transition-colors placeholder:text-ink/30 focus:border-ink/40";
-const labelClass =
-  "text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/45";
 
 export function AdminDashboard({
   initialProducts,
@@ -62,6 +45,7 @@ export function AdminDashboard({
   const [signingOut, setSigningOut] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<"all" | CategorySlug>("all");
   const [sort, setSort] = useState<SortValue>("newest");
@@ -158,16 +142,42 @@ export function AdminDashboard({
     router.refresh();
   };
 
-  const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
+  const openAddForm = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setShowForm(true);
+    setStatus(null);
+  };
+
+  const openEditForm = (product: Product) => {
+    setForm(productToForm(product));
+    setEditingId(product.id);
+    setShowForm(true);
+    setStatus(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPending(true);
     setStatus(null);
 
+    const isEditing = Boolean(editingId);
+
     try {
       const response = await fetch("/api/admin/products", {
-        method: "POST",
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...formToPayload(form),
+          ...(isEditing ? { id: editingId } : {}),
+        }),
       });
       const data = (await response.json()) as {
         error?: string;
@@ -175,22 +185,29 @@ export function AdminDashboard({
       };
 
       if (!response.ok || !data.products) {
-        throw new Error(data.error ?? "Unable to add product.");
+        throw new Error(data.error ?? "Unable to save the product.");
       }
 
       setProducts(data.products);
-      setForm(emptyForm);
-      setShowForm(false);
-      setQuery("");
-      setCategory("all");
-      setSort("newest");
-      setPage(1);
-      setStatus({ type: "success", message: "Product added to the store." });
+      setStatus({
+        type: "success",
+        message: isEditing
+          ? "Product updated in the store."
+          : "Product added to the store.",
+      });
+      closeForm();
+
+      if (!isEditing) {
+        setQuery("");
+        setCategory("all");
+        setSort("newest");
+        setPage(1);
+      }
     } catch (caught) {
       setStatus({
         type: "error",
         message:
-          caught instanceof Error ? caught.message : "Unable to add product.",
+          caught instanceof Error ? caught.message : "Unable to save the product.",
       });
     } finally {
       setPending(false);
@@ -225,6 +242,9 @@ export function AdminDashboard({
       }
 
       setProducts(data.products);
+      if (editingId === product.id) {
+        closeForm();
+      }
       setStatus({ type: "success", message: "Product removed." });
     } catch (caught) {
       setStatus({
@@ -271,7 +291,7 @@ export function AdminDashboard({
           </Link>
           <button
             type="button"
-            onClick={() => setShowForm((current) => !current)}
+            onClick={() => (showForm ? closeForm() : openAddForm())}
             className="inline-flex h-10 items-center gap-2 rounded-full bg-olive px-4 text-[11px] font-semibold text-cream transition-colors hover:bg-ink"
           >
             <Plus className="h-4 w-4" />
@@ -294,147 +314,18 @@ export function AdminDashboard({
       )}
 
       {showForm && (
-        <section className="mt-8 rounded-[24px] border border-line bg-white/55 p-5 sm:p-6">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-cream">
-              <Plus className="h-4 w-4" />
-            </span>
-            <h2 className="font-heading text-lg font-extrabold tracking-tight text-ink">
-              Add product
-            </h2>
-          </div>
-
-          <form onSubmit={handleAdd} className="mt-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label htmlFor="product-name" className={labelClass}>
-                  Name
-                </label>
-                <input
-                  id="product-name"
-                  value={form.name}
-                  onChange={(event) => update("name", event.target.value)}
-                  placeholder="Riaf Everyday Bottle"
-                  className={inputClass}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="product-category" className={labelClass}>
-                  Category
-                </label>
-                <select
-                  id="product-category"
-                  value={form.category}
-                  onChange={(event) =>
-                    update("category", event.target.value as CategorySlug)
-                  }
-                  className={inputClass}
-                >
-                  {categories.map((entry) => (
-                    <option key={entry.slug} value={entry.slug}>
-                      {entry.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="product-badge" className={labelClass}>
-                  Badge (optional)
-                </label>
-                <input
-                  id="product-badge"
-                  value={form.badge}
-                  onChange={(event) => update("badge", event.target.value)}
-                  placeholder="New"
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="product-price" className={labelClass}>
-                  Price (USD)
-                </label>
-                <input
-                  id="product-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(event) => update("price", event.target.value)}
-                  placeholder="49"
-                  className={inputClass}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="product-stock" className={labelClass}>
-                  Stock
-                </label>
-                <input
-                  id="product-stock"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={form.stock}
-                  onChange={(event) => update("stock", event.target.value)}
-                  placeholder="10"
-                  className={inputClass}
-                  required
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label htmlFor="product-tagline" className={labelClass}>
-                  Tagline
-                </label>
-                <input
-                  id="product-tagline"
-                  value={form.tagline}
-                  onChange={(event) => update("tagline", event.target.value)}
-                  placeholder="A quiet everyday essential."
-                  className={inputClass}
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label htmlFor="product-description" className={labelClass}>
-                  Description
-                </label>
-                <textarea
-                  id="product-description"
-                  value={form.description}
-                  onChange={(event) =>
-                    update("description", event.target.value)
-                  }
-                  placeholder="Describe the product for its detail page."
-                  rows={3}
-                  className="mt-2 w-full rounded-xl border border-line bg-cream px-3.5 py-3 text-[13px] leading-relaxed text-ink outline-none transition-colors placeholder:text-ink/30 focus:border-ink/40"
-                />
-              </div>
-            </div>
-
-            <div className="mt-5 flex flex-wrap justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="inline-flex h-10 items-center rounded-full border border-line px-5 text-[11px] font-semibold text-ink/60 transition-colors hover:border-ink/25 hover:text-ink"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={pending}
-                className="inline-flex h-10 items-center justify-center rounded-full bg-ink px-5 text-[11px] font-semibold uppercase tracking-[0.12em] text-cream transition-colors hover:bg-olive disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {pending ? "Adding..." : "Add product"}
-              </button>
-            </div>
-          </form>
-        </section>
+        <ProductFormPanel
+          form={form}
+          editingName={
+            editingId
+              ? products.find((product) => product.id === editingId)?.name
+              : undefined
+          }
+          pending={pending}
+          onChange={update}
+          onSubmit={handleSubmit}
+          onCancel={closeForm}
+        />
       )}
 
       <section className="mt-8">
@@ -528,9 +419,8 @@ export function AdminDashboard({
                   className="flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap"
                 >
                   <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-line bg-beige">
-                    <ProductArt
-                      art={product.art}
-                      tone={product.gallery[0]}
+                    <ProductImage
+                      product={product}
                       className="h-full w-full"
                     />
                   </span>
@@ -556,6 +446,14 @@ export function AdminDashboard({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(product)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-ink/60 transition-colors hover:border-ink/30 hover:text-ink"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
                     <Link
                       href={`/product/${product.slug}`}
                       className="inline-flex h-9 items-center rounded-full border border-line px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-ink/60 transition-colors hover:border-ink/30 hover:text-ink"
