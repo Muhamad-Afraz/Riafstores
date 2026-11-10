@@ -115,9 +115,17 @@ export function SiteFooter() {
         </div>
 
         <div className="flex flex-col gap-5 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[10px] text-cream/35">
-            © 2026 RIAF. All rights reserved.
-          </p>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[10px] text-cream/35">
+              © 2026 RIAF. All rights reserved.
+            </p>
+            <p className="text-[10px] text-cream/30">
+              Designed &amp; built by{" "}
+              <span className="font-medium tracking-[0.02em] text-cream/50">
+                Afraz
+              </span>
+            </p>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {["Visa", "Mastercard", "Amex", "PayPal", "Apple Pay"].map(
