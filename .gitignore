@@ -14,6 +14,6 @@ data/accounts.json
 data/login-challenges.json
 data/*.tmp
 
-# Admin-uploaded product pictures (stored on disk in local development).
-public/uploads/products/*
-!public/uploads/products/.gitkeep
+# Admin-uploaded product pictures are committed on purpose: data/catalog.json
+# references them by path, and hosts such as Vercel only serve files that are
+# in the repository (or in the database via DATABASE_URL).
